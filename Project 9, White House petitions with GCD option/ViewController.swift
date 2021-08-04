@@ -14,6 +14,11 @@ class ViewController: UITableViewController {
     override func viewDidLoad() {
         super.viewDidLoad()
        
+        performSelector(inBackground: #selector(fetchJSON), with: nil)
+          
+    }
+    
+   @objc func fetchJSON() {
         let urlString: String
         
         if navigationController?.tabBarItem.tag == 0 {
@@ -22,37 +27,31 @@ class ViewController: UITableViewController {
             urlString = "https://www.hackingwithswift.com/samples/petitions-2.json"
         }
         
-        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
-            if let url = URL(string: urlString) {
-                if let data = try? Data(contentsOf: url) {
-                    self?.parse(json: data)
-                    return
-                }
+        if let url = URL(string: urlString) {
+            if let data = try? Data(contentsOf: url) {
+                parse(json: data)
+                return
             }
-            // Поскольку showError содержит объект относящийся к UI нужно будет изменить эту функцию и переместить в главные потоки все UI компоненты
-            self?.showError()
         }
-          
+    performSelector(onMainThread: #selector(showError), with: nil, waitUntilDone: false)
     }
     
-    func showError() {
-        DispatchQueue.main.async { [weak self] in
+     
+    @objc func showError() {
             let ac = UIAlertController(title: "Loading error", message: "There was a problem loading the feed; please check your connection and try again.", preferredStyle: .alert)
             ac.addAction(UIAlertAction(title: "OK", style: .default))
-            self?.present(ac, animated: true)
-        }
+            present(ac, animated: true)
     }
-   // Функция parse  в строке 25 помещена на исполнение в backgroud, запускать UI in background это плохо, поэтому добавлена строка 48, чтобы выполнить действия с UI в главном потоке
+    
+
     func parse(json: Data) {
         let decoder = JSONDecoder()
         
         if let jsonPetitions = try? decoder.decode(Petitions.self, from: json) {
             petitions = jsonPetitions.results
-          // Возвращает загрузку в таблице в главный поток
-            DispatchQueue.main.async { [weak self] in
-                self?.tableView.reloadData()
-            }
-            
+            tableView.performSelector(onMainThread: #selector(tableView.reloadData), with: nil, waitUntilDone: false)
+        } else {
+            performSelector(onMainThread: #selector(showError), with: nil, waitUntilDone: false)
         }
         
     }
