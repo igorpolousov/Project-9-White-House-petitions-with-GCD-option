@@ -10,9 +10,12 @@ import UIKit
 class ViewController: UITableViewController {
     
     var petitions = [Petition]()
+    var filteredPetitions = [Petition]()
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        navigationItem.leftBarButtonItem = UIBarButtonItem(barButtonSystemItem: .search, target: self, action: #selector(findPetition))
        
         let urlString: String
         
@@ -33,6 +36,44 @@ class ViewController: UITableViewController {
             self?.showError()
         }
           
+    }
+    
+    @objc func findPetition() {
+        let ac = UIAlertController(title: "Enter keywords for search", message: nil, preferredStyle: .alert)
+        ac.addTextField()
+        
+        let addAction = UIAlertAction(title: "Find", style: .default) {
+            [weak self, weak ac] action in
+            // Получили слово из поля textFields
+            guard let search = ac?.textFields?[0].text else { return }
+            self?.findAndPut(search)
+        }
+        
+        ac.addAction(addAction)
+        present(ac, animated: true)
+    }
+    // Alert with textField for search function
+    func findAndPut(_ search: String) {
+        filteredPetitions.removeAll()
+        let lowAnswer = search.lowercased()
+        
+        for petition in petitions {
+            let lowPetitionBody = petition.body.lowercased()
+            let lowPetitionTitle = petition.title.lowercased()
+            if lowPetitionBody.contains(lowAnswer) || lowPetitionTitle.contains(lowAnswer) {
+                filteredPetitions.insert(petition, at: 0)
+                petitions = filteredPetitions
+                tableView.reloadData()
+            } else if filteredPetitions.isEmpty {
+                notFound()
+            }
+        }
+    }
+    // If keyword not found show message
+    func notFound() {
+        let ac = UIAlertController(title: "Keywords not found", message: "There was no words found; please enter another keywords and try again", preferredStyle: .alert)
+        ac.addAction(UIAlertAction(title: "Ok", style: .default))
+        present(ac, animated: true)
     }
     
     func showError() {
